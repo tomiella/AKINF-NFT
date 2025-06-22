@@ -1,0 +1,19 @@
+{
+  "name": "Tom's First NFT",
+  "description": "This NFT was minted on the Holesky testnet using OpenZeppelin ERC721 and represents Tom's entry into on-chain development.",
+  "image": "https://example.com/image.png",
+  "attributes": [
+    {
+      "trait_type": "Skill",
+      "value": "Solidity"
+    },
+    {
+      "trait_type": "Network",
+      "value": "Holesky"
+    },
+    {
+      "trait_type": "Token ID",
+      "value": 1234
+    }
+  ]
+}
