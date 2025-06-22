@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>ERC20 Transfer (Holesky)</title>
+  <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.0/dist/ethers.umd.min.js"></script>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 2em; }
+    button { padding: 0.5em 1em; font-size: 1em; }
+    #output { margin-top: 1em; font-size: 1.2em; }
+  </style>
+</head>
+<body>
+  <h2>Send 10 Tokens (ERC20 transfer, Holesky)</h2>
+  <button id="transferBtn">Send 10 Tokens</button>
+  <div id="output"></div>
+
+  <script>
+    // Replace with your ERC20 contract address from exercise 4
+    const TOKEN_ADDRESS = "0x7b74E3620627A126D8Ea14CDEbc762d90dcFfa60";
+    const RECIPIENT = "0x15433DA387451F9dE4565280C85506CB71aF9376";
+    const AMOUNT = "10";
+
+    // Minimal ERC20 ABI for transfer and decimals
+    const ERC20_ABI = [
+      "function transfer(address to, uint256 value) returns (bool)",
+      "function decimals() view returns (uint8)",
+      "function symbol() view returns (string)"
+    ];
+
+    const HOLESKY_CHAIN_ID = "0x4268"; // 17000 in hex
+    const HOLESKY_RPC = "https://ethereum-holesky.publicnode.com";
+
+    async function switchToHolesky() {
+      if (!window.ethereum) throw new Error("MetaMask not detected.");
+      try {
+        await window.ethereum.request({
+          method: 'wallet_switchEthereumChain',
+          params: [{ chainId: HOLESKY_CHAIN_ID }],
+        });
+      } catch (switchError) {
+        // If Holesky isn't added, add it
+        if (switchError.code === 4902) {
+          await window.ethereum.request({
+            method: 'wallet_addEthereumChain',
+            params: [{
+              chainId: HOLESKY_CHAIN_ID,
+              chainName: "Holesky Testnet",
+              rpcUrls: [HOLESKY_RPC],
+              nativeCurrency: { name: "Ethereum", symbol: "ETH", decimals: 18 },
+              blockExplorerUrls: ["https://holesky.beaconcha.in"]
+            }],
+          });
+        } else {
+          throw switchError;
+        }
+      }
+    }
+
+    document.getElementById('transferBtn').onclick = async () => {
+      const output = document.getElementById('output');
+      output.textContent = "Connecting to MetaMask...";
+      try {
+        if (!window.ethereum) {
+          output.textContent = "MetaMask is required.";
+          return;
+        }
+
+        // Request wallet connection
+        await window.ethereum.request({ method: 'eth_requestAccounts' });
+
+        // Ensure Holesky is selected
+        await switchToHolesky();
+
+        // Use ethers.js with MetaMask provider
+        const provider = new ethers.providers.Web3Provider(window.ethereum, "any");
+        const signer = provider.getSigner();
+
+        // Instantiate contract
+        const contract = new ethers.Contract(TOKEN_ADDRESS, ERC20_ABI, signer);
+
+        output.textContent = "Fetching token info...";
+
+        // Get token decimals and symbol
+        const [decimals, symbol] = await Promise.all([
+          contract.decimals(),
+          contract.symbol()
+        ]);
+
+        // Prepare amount in token's smallest unit
+        const amountWithDecimals = ethers.utils.parseUnits(AMOUNT, decimals);
+
+        output.textContent = `Sending ${AMOUNT} ${symbol} to ${RECIPIENT}...`;
+
+        // Send transfer transaction
+        const tx = await contract.transfer(RECIPIENT, amountWithDecimals);
+        output.textContent = `Transaction sent! Waiting for confirmation... (tx: ${tx.hash})`;
+
+        // Wait for confirmation
+        await tx.wait();
+
+        output.textContent = `Success! Sent ${AMOUNT} ${symbol} to ${RECIPIENT}. (tx: ${tx.hash})`;
+      } catch (err) {
+        output.textContent = "Error: " + (err.data && err.data.message ? err.data.message : err.message);
+      }
+    };
+  </script>
+</body>
+</html>
