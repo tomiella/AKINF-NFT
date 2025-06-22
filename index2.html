@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>ERC20 Balance Checker (Holesky)</title>
+  <title>ERC20 Token Balance Checker (Holesky)</title>
   <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.0/dist/ethers.umd.min.js"></script>
   <style>
     body { font-family: Arial, sans-serif; margin: 2em; }
@@ -11,19 +11,19 @@
   </style>
 </head>
 <body>
-  <h2>Check Your ERC20 Token Balance (Holesky)</h2>
+  <h2>Check Your ERC20 Token Balance (Holesky Testnet)</h2>
   <button id="checkBalanceBtn">Check Balance</button>
   <div id="output"></div>
 
   <script>
     // Replace with your ERC20 contract address from exercise 4
-    const TOKEN_ADDRESS = "YOUR_TOKEN_CONTRACT_ADDRESS";
+    const TOKEN_ADDRESS = "YOUR_ERC20_CONTRACT_ADDRESS";
 
-    // Minimal ERC20 ABI for balanceOf
+    // Minimal ERC20 ABI for balanceOf, symbol, and decimals
     const ERC20_ABI = [
       "function balanceOf(address owner) view returns (uint256)",
-      "function decimals() view returns (uint8)",
-      "function symbol() view returns (string)"
+      "function symbol() view returns (string)",
+      "function decimals() view returns (uint8)"
     ];
 
     const HOLESKY_CHAIN_ID = "0x4268"; // 17000 in hex
@@ -66,8 +66,7 @@
 
         // Request wallet connection and get the current account
         const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
-        const account = accounts[0];
-        if (!account) throw new Error("No account found in MetaMask.");
+        const account = ethers.utils.getAddress(accounts[0]); // Ensures proper formatting
 
         // Ensure Holesky is selected
         await switchToHolesky();
