@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Holesky Block Height Viewer</title>
+  <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.0/dist/ethers.umd.min.js"></script>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 2em; }
+    button { padding: 0.5em 1em; font-size: 1em; }
+    #output { margin-top: 1em; font-size: 1.2em; }
+  </style>
+</head>
+<body>
+  <h2>Holesky Testnet Block Height</h2>
+  <button id="getBlockBtn">Get Current Block Height</button>
+  <div id="output"></div>
+
+  <script>
+    const HOLESKY_RPC = "https://ethereum-holesky.publicnode.com";
+    const HOLESKY_CHAIN_ID = "0x4268"; // 17000 in hex
+
+    async function switchToHolesky() {
+      if (!window.ethereum) throw new Error("MetaMask not detected.");
+      try {
+        await window.ethereum.request({
+          method: 'wallet_switchEthereumChain',
+          params: [{ chainId: HOLESKY_CHAIN_ID }],
+        });
+      } catch (switchError) {
+        // If Holesky isn't added, add it
+        if (switchError.code === 4902) {
+          await window.ethereum.request({
+            method: 'wallet_addEthereumChain',
+            params: [{
+              chainId: HOLESKY_CHAIN_ID,
+              chainName: "Holesky Testnet",
+              rpcUrls: [HOLESKY_RPC],
+              nativeCurrency: { name: "Ethereum", symbol: "ETH", decimals: 18 },
+              blockExplorerUrls: ["https://holesky.beaconcha.in"]
+            }],
+          });
+        } else {
+          throw switchError;
+        }
+      }
+    }
+
+    document.getElementById('getBlockBtn').onclick = async () => {
+      const output = document.getElementById('output');
+      output.textContent = "Connecting...";
+      try {
+        if (!window.ethereum) {
+          output.textContent = "MetaMask is required.";
+          return;
+        }
+        // Request wallet connection
+        await window.ethereum.request({ method: 'eth_requestAccounts' });
+        // Ensure Holesky is selected
+        await switchToHolesky();
+        // Use ethers.js with Holesky RPC
+        const provider = new ethers.providers.Web3Provider(window.ethereum, "any");
+        const blockNumber = await provider.getBlockNumber();
+        output.textContent = "Current Holesky Block Height: " + blockNumber;
+      } catch (err) {
+        output.textContent = "Error: " + err.message;
+      }
+    };
+  </script>
+</body>
+</html>
