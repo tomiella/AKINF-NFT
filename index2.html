@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>ERC20 Balance Checker (Holesky)</title>
+  <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.0/dist/ethers.umd.min.js"></script>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 2em; }
+    button { padding: 0.5em 1em; font-size: 1em; }
+    #output { margin-top: 1em; font-size: 1.2em; }
+  </style>
+</head>
+<body>
+  <h2>Check Your ERC20 Token Balance (Holesky)</h2>
+  <button id="checkBalanceBtn">Check Balance</button>
+  <div id="output"></div>
+
+  <script>
+    // Replace with your ERC20 contract address from exercise 4
+    const TOKEN_ADDRESS = "YOUR_TOKEN_CONTRACT_ADDRESS";
+
+    // Minimal ERC20 ABI for balanceOf
+    const ERC20_ABI = [
+      "function balanceOf(address owner) view returns (uint256)",
+      "function decimals() view returns (uint8)",
+      "function symbol() view returns (string)"
+    ];
+
+    const HOLESKY_CHAIN_ID = "0x4268"; // 17000 in hex
+    const HOLESKY_RPC = "https://ethereum-holesky.publicnode.com";
+
+    async function switchToHolesky() {
+      if (!window.ethereum) throw new Error("MetaMask not detected.");
+      try {
+        await window.ethereum.request({
+          method: 'wallet_switchEthereumChain',
+          params: [{ chainId: HOLESKY_CHAIN_ID }],
+        });
+      } catch (switchError) {
+        // If Holesky isn't added, add it
+        if (switchError.code === 4902) {
+          await window.ethereum.request({
+            method: 'wallet_addEthereumChain',
+            params: [{
+              chainId: HOLESKY_CHAIN_ID,
+              chainName: "Holesky Testnet",
+              rpcUrls: [HOLESKY_RPC],
+              nativeCurrency: { name: "Ethereum", symbol: "ETH", decimals: 18 },
+              blockExplorerUrls: ["https://holesky.beaconcha.in"]
+            }],
+          });
+        } else {
+          throw switchError;
+        }
+      }
+    }
+
+    document.getElementById('checkBalanceBtn').onclick = async () => {
+      const output = document.getElementById('output');
+      output.textContent = "Connecting to MetaMask...";
+      try {
+        if (!window.ethereum) {
+          output.textContent = "MetaMask is required.";
+          return;
+        }
+
+        // Request wallet connection and get the current account
+        const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+        const account = accounts[0];
+        if (!account) throw new Error("No account found in MetaMask.");
+
+        // Ensure Holesky is selected
+        await switchToHolesky();
+
+        // Use ethers.js with MetaMask provider
+        const provider = new ethers.providers.Web3Provider(window.ethereum, "any");
+        const contract = new ethers.Contract(TOKEN_ADDRESS, ERC20_ABI, provider);
+
+        output.textContent = "Fetching token info...";
+
+        // Get token symbol and decimals
+        const [symbol, decimals] = await Promise.all([
+          contract.symbol(),
+          contract.decimals()
+        ]);
+
+        // Get balance
+        const balance = await contract.balanceOf(account);
+
+        // Format balance
+        const formatted = ethers.utils.formatUnits(balance, decimals);
+
+        output.textContent = `Your balance: ${formatted} ${symbol}`;
+      } catch (err) {
+        output.textContent = "Error: " + err.message;
+      }
+    };
+  </script>
+</body>
+</html>
